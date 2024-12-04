@@ -1,0 +1,466 @@
+syntax
+
+1. CRUD Operations (Create, Read, Update, Delete)
+Create (Insert Documents)
+
+insertOne() – Inserts a single document.
+insertMany() – Inserts multiple documents at once.
+Example:
+
+db.books.insertOne({ _id: 1, title: "New Book", stock: 10, issued: 3 });
+db.books.insertMany([
+{ _id: 2, title: "Second Book", stock: 5, issued: 1 },
+{ _id: 3, title: "Third Book", stock: 8, issued: 2 }
+]);
+
+2.
+Read (Query Documents)
+
+find() – Retrieves documents matching the query criteria.
+findOne() – Retrieves the first document that matches the query.
+Example:
+
+db.books.find({ stock: { $gt: 5 } });
+db.books.findOne({ title: "New Book" });
+
+3. Update (Modify Documents)
+
+updateOne() – Updates the first document that matches the filter.
+updateMany() – Updates all documents that match the filter.
+$set – Modifies the value of a field.
+$inc – Increments the value of a field.
+Example:
+
+db.books.updateOne({ _id: 1 }, { $set: { stock: 12 } });
+db.books.updateMany({ stock: { $lt: 5 } }, { $inc: { stock: 5 } });
+
+4. Delete (Remove Documents)
+
+deleteOne() – Deletes the first document that matches the filter.
+deleteMany() – Deletes all documents that match the filter.
+Example:
+
+db.books.deleteOne({ _id: 3 });
+db.books.deleteMany({ stock: { $lt: 1 } });
+
+
+5. Query Operators for Filtering
+Comparison Operators
+
+$gt, $lt, $gte, $lte – Greater than, less than, greater than or equal to, less than or equal to.
+$eq, $ne – Equal to, not equal to.
+$in, $nin – Matches any value in an array, or not in an array.
+Example:
+
+db.books.find({ stock: { $gt: 5, $lt: 20 } });
+db.books.find({ _id: { $in: [1, 2, 3] } });
+
+6. Logical Operators
+
+$and, $or – Combines multiple conditions.
+$not – Inverts the condition.
+$nor – None of the conditions are met.
+Example:
+
+db.books.find({ $and: [{ stock: { $gt: 5 } }, { issued: { $lt: 10 } }] });
+db.books.find({ $or: [{ stock: 0 }, { reorder: true }] });
+
+
+7. Aggregation Operators
+Aggregation Pipeline
+
+$match – Filters documents based on criteria.
+$group – Groups documents by a specified field.
+$sort – Sorts documents in ascending or descending order.
+$project – Reshapes documents by including/excluding fields.
+Example:
+
+db.books.aggregate([
+{ $match: { stock: { $gt: 5 } } },
+{ $group: { _id: null, totalStock: { $sum: "$stock" } } }
+]);
+
+8. Sorting and Projection
+
+sort() – Sorts documents in ascending (1) or descending (-1) order.
+project() – Selects specific fields to include or exclude.
+Example:
+
+db.books.find().sort({ stock: -1 });
+db.books.find({}, { title: 1, stock: 1, _id: 0 });
+
+
+-------------------------------------------------------------------------------------------------------------
+
+
+-- Create Products Table
+CREATE TABLE products1 (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR2(100),
+    price DECIMAL(10, 2)
+);
+
+-- Create Inventory Table
+CREATE TABLE inventory (
+    product_id INT PRIMARY KEY,
+    quantity_in_stock INT,
+    CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES products1(product_id)
+);
+
+-- Create Orders Table
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    order_date DATE,
+    product_id INT,
+    order_quantity INT,
+    CONSTRAINT fk_order_product FOREIGN KEY (product_id) REFERENCES products1(product_id)
+);
+BEGIN
+    -- 1. Add a new product to the products table
+    INSERT INTO products1 (product_id, product_name, price)
+    VALUES (1001, 'Wireless Mouse', 25.99);
+
+    -- 2. Add an inventory entry for the new product
+    INSERT INTO inventory (product_id, quantity_in_stock)
+    VALUES (1001, 50);
+
+    -- 3. Set a savepoint before placing an order
+    SAVEPOINT before_order;
+
+    -- 4. Simulate an order placement and deduct from inventory
+    DECLARE
+        order_quantity INT := 60;  -- Example order quantity
+        current_quantity INT;  -- Variable to store the inventory quantity
+    BEGIN
+        -- Insert the order into the orders table
+        INSERT INTO orders (order_id, order_date, product_id, order_quantity)
+        VALUES (1, SYSDATE, 1001, order_quantity);
+
+        -- Deduct the inventory based on the order quantity
+        UPDATE inventory
+        SET quantity_in_stock = quantity_in_stock - order_quantity
+        WHERE product_id = 1001;
+
+        -- 5. Get the current inventory quantity
+        SELECT quantity_in_stock
+        INTO current_quantity
+        FROM inventory
+        WHERE product_id = 1001;
+
+        -- Check if the inventory quantity goes negative
+        IF current_quantity < 0 THEN
+            -- If the quantity goes negative, rollback to the savepoint
+            ROLLBACK TO before_order;
+            DBMS_OUTPUT.PUT_LINE('Inventory quantity is negative, rollback executed!');
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Order placed successfully, inventory updated.');
+        END IF;
+    END;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- If any error occurs, rollback the transaction completely
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error occurred, transaction rolled back!');
+END;
+
+
+------------------------------------------------------------------------------------------------------------
+
+
+3. Implicit and Explicit Transaction Control:
+Implicit Transaction Control:
+Oracle Database performs automatic commits and rollbacks in specific situations:
+ Automatic Commit: Occurs when a DDL or DCL statement is issued or upon a normal exit from 
+SQL*Plus.
+ Automatic Rollback: Happens on an abnormal exit or system failure.
+Explicit Transaction Control:
+Users can manually control transactions using COMMIT, ROLLBACK, and SAVEPOINT commands 
+to ensure precise control over data modifications.
+Advantages of COMMIT and ROLLBACK:
+ Ensures data consistency.
+ Allows previewing changes before committing.
+ Groups related operations for atomic execution.
+Creating and Modifying a Table in a Transaction
+1. Create a Table worker with attributes worker_id, worker_name, and salary.
+CREATE TABLE worker (
+ worker_id NUMBER PRIMARY KEY,
+ worker_name VARCHAR2(50),
+ salary NUMBER
+);
+2. Insert a Record in worker:
+INSERT INTO worker (worker_id, worker_name, salary) VALUES (1, Sohail, 5000);
+ This action is a DML statement, so a commit is required to finalize it.
+
+--------------------------------------------------------------------------------------------------------
+
+. Update the Salary without committing:
+UPDATE worker SET salary = 6000 WHERE worker_id = 1;
+4. Activity on Different Transactions:
+Open a new unshared worksheet.
+Attempt to update the same record from the unshared worksheet:
+UPDATE worker SET salary = 7000 WHERE worker_id = 1;
+The transaction will lock the row until the previous worksheet's transaction is committed or 
+rolled back.
+5. Commit the transaction in the original worksheet:
+COMMIT;
+Retry the update from the unshared worksheet. This time, it should succeed.
+Savepoint and Rollback within a Transaction
+1. Start Transaction and Insert Data:
+SET TRANSACTION NAME 'test_transaction';
+INSERT INTO worker (worker_id, worker_name, salary) VALUES (2, ‘Erum’, 5500);
+SAVEPOINT sp1;
+2. Update Data and set a savepoint:
+UPDATE worker SET salary = 6000 WHERE worker_name = ‘Erum’;
+SAVEPOINT sp2;
+3. Rollback to sp1 (Undo the Update):
+ROLLBACK TO SAVEPOINT sp1;
+Erum’s salary returns to 5500.
+4. Commit the Transaction:
+COMMIT;
+Using AUTOCOMMIT
+1. Enable AUTOCOMMIT:
+SET AUTOCOMMIT ON;
+2. Insert Data:
+INSERT INTO worker (worker_id, worker_name, salary) VALUES (3, ‘FAST-NU’, 5000);
+Since AUTOCOMMIT is on, the insert will commit automatically.
+3. Disable AUTOCOMMIT:
+SET AUTOCOMMIT OFF;
+--------------------------------------------------------------------------------------------------------------
+
+Cursor
+
+SET SERVEROUTPUT ON;
+DECLARE
+ CURSOR Cursor_EMP IS
+ SELECT * FROM employees ORDER BY salary DESC;
+ -- record 
+ row_emp Cursor_EMP%ROWTYPE;
+BEGIN
+ OPEN Cursor_EMP;
+-- LOOP
+ FETCH Cursor_EMP INTO row_emp;
+ --EXIT WHEN Cursor_EMP%NOTFOUND; --when cursor will be empty
+ DBMS_OUTPUT.PUT_LINE( 'EMPLOYEE id: ' ||row_emp.EMPLOYEE_ID || ' EMPLOYEE NAME: ' || 
+row_emp.FIRST_NAME || ' EMPLOYEE CONTACT: ' || row_emp.PHONE_NUMBER || '.');
+-- END LOOP;
+ CLOSE Cursor_EMP;
+END;
+SET SERVEROUTPUT ON;
+DECLARE
+ CURSOR Cursor_EMP IS
+ SELECT * FROM employees ORDER BY salary DESC;
+ -- record 
+ row_emp Cursor_EMP%ROWTYPE;
+BEGIN
+ OPEN Cursor_EMP;
+ LOOP
+ FETCH Cursor_EMP INTO row_emp;
+ EXIT WHEN Cursor_EMP%NOTFOUND;
+ DBMS_OUTPUT.PUT_LINE( 'EMPLOYEE id: ' ||row_emp.EMPLOYEE_ID || ' EMPLOYEE NAME: ' || 
+row_emp.FIRST_NAME || ' EMPLOYEE CONTACT: ' || row_emp.PHONE_NUMBER || '.');
+ END LOOP;
+ CLOSE Cursor_EMP;
+END;
+
+---------------------------------------------------------------------------------------------------------------
+
+
+
+-- Create Overdraft_Warnings table
+CREATE TABLE Overdraft_Warnings (
+    warning_id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    account_id NUMBER NOT NULL,
+    attempted_amount NUMBER(12, 2) NOT NULL,
+    warning_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create High_Risk_Transactions table
+CREATE TABLE High_Risk_Transactions (
+    transaction_id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    account_id NUMBER NOT NULL,
+    transaction_amount NUMBER(12, 2) NOT NULL,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Overdraft_Approval table
+CREATE TABLE Overdraft_Approval (
+    account_id NUMBER PRIMARY KEY,
+    approval_limit NUMBER(12, 2) NOT NULL
+);
+
+-- Create Trigger on Bank_Account
+CREATE OR REPLACE TRIGGER Prevent_Negative_Balance
+BEFORE UPDATE ON Bank_Account
+FOR EACH ROW
+DECLARE
+    approval_limit NUMBER(12, 2);
+BEGIN
+    -- Check if withdrawal exceeds balance
+    IF :NEW.balance < 0 THEN
+        -- Check for pre-approval in Overdraft_Approval table
+        SELECT approval_limit INTO approval_limit
+        FROM Overdraft_Approval
+        WHERE account_id = :NEW.account_id;
+
+        IF approval_limit IS NULL OR ABS(:NEW.balance) > approval_limit THEN
+            -- Log in Overdraft_Warnings and prevent transaction
+            INSERT INTO Overdraft_Warnings (account_id, attempted_amount)
+            VALUES (:NEW.account_id, ABS(:NEW.balance));
+            RAISE_APPLICATION_ERROR(-20001, 'Transaction denied: Insufficient funds.');
+        ELSE
+            -- Log in High_Risk_Transactions and allow transaction
+            INSERT INTO High_Risk_Transactions (account_id, transaction_amount)
+            VALUES (:NEW.account_id, ABS(:NEW.balance));
+        END IF;
+    END IF;
+
+    -- Update last_transaction_date for successful transactions
+    :NEW.last_transaction_date := SYSTIMESTAMP;
+END;
+/
+
+
+------------------------------------------------------------------------------------------------------------------
+
+-- Create Adjustment_History table
+CREATE TABLE Adjustment_History (
+    adjustment_id NUMBER PRIMARY KEY,
+    employee_id NUMBER NOT NULL,
+    amount NUMBER(12, 2) NOT NULL,
+    adjusted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_by VARCHAR2(100) NOT NULL
+);
+
+-- Create Error_Log table
+CREATE TABLE Error_Log (
+    error_id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    error_message VARCHAR2(4000) NOT NULL,
+    error_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger on Salary_Adjustments
+CREATE OR REPLACE TRIGGER Update_Payroll_On_Adjustment
+AFTER INSERT ON Salary_Adjustments
+FOR EACH ROW
+DECLARE
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    -- Begin Payroll update
+    BEGIN
+        -- Update Payroll table
+        UPDATE Payroll
+        SET salary = salary + :NEW.amount
+        WHERE employee_id = :NEW.employee_id;
+
+        -- If no rows are updated, rollback and log error
+        IF SQL%ROWCOUNT = 0 THEN
+            INSERT INTO Adjustment_History (adjustment_id, employee_id, amount, adjusted_at, approved_by)
+            VALUES (:NEW.adjustment_id, :NEW.employee_id, :NEW.amount, CURRENT_TIMESTAMP, :NEW.approved_by);
+
+            RAISE_APPLICATION_ERROR(-20002, 'Payroll update failed: Employee not found.');
+        END IF;
+
+        -- Log adjustment in Adjustment_History
+        INSERT INTO Adjustment_History (adjustment_id, employee_id, amount, adjusted_at, approved_by)
+        VALUES (:NEW.adjustment_id, :NEW.employee_id, :NEW.amount, CURRENT_TIMESTAMP, :NEW.approved_by);
+
+        -- Commit transaction
+        COMMIT;
+    EXCEPTION
+        WHEN OTHERS THEN
+            -- Rollback and log error in Error_Log
+            ROLLBACK;
+            INSERT INTO Error_Log (error_message)
+            VALUES (SQLERRM);
+            RAISE;
+    END;
+END;
+/
+
+
+
+---------------------------------------------------------------------------------------------------------
+
+-- Trigger to log changes in Employee table
+CREATE OR REPLACE TRIGGER Audit_Employee_Changes
+AFTER INSERT OR UPDATE OR DELETE ON Employee
+FOR EACH ROW
+DECLARE
+    operation VARCHAR2(10);
+BEGIN
+    -- Determine the type of operation
+    IF INSERTING THEN
+        operation := 'INSERT';
+    ELSIF UPDATING THEN
+        operation := 'UPDATE';
+    ELSIF DELETING THEN
+        operation := 'DELETE';
+    END IF;
+
+    -- Insert a record in Employee_Audit
+    INSERT INTO Employee_Audit (operation_type, employee_id, old_value, new_value)
+    VALUES (
+        operation,
+        NVL(:OLD.employee_id, :NEW.employee_id),
+        CASE WHEN UPDATING THEN :OLD.employee_name ELSE NULL END,
+        CASE WHEN INSERTING THEN :NEW.employee_name ELSE NULL END
+    );
+END;
+/
+
+
+----------------------------------------------------------------------------------------------------------
+
+-- Trigger to audit cascading changes in related Salaries table
+CREATE OR REPLACE TRIGGER Cascade_Audit_Salaries
+AFTER UPDATE ON Salaries
+FOR EACH ROW
+DECLARE
+    trigger_name VARCHAR2(50) := 'Cascade_Audit_Salaries';
+BEGIN
+    -- Insert record in Cascade_Audit
+    INSERT INTO Cascade_Audit (table_name, trigger_name, operation_type, reference_id)
+    VALUES ('Salaries', trigger_name, 'UPDATE', :NEW.employee_id);
+END;
+/
+
+----------------------------------------------------------------------------------------------------------
+
+BEGIN
+    -- Step 1: Insert new order
+    INSERT INTO Orders (order_id, product_id, quantity, order_status)
+    VALUES (12345, 101, 5, 'Pending');
+
+    -- Step 2: Check inventory levels
+    DECLARE
+        stock_level NUMBER;
+    BEGIN
+        SELECT quantity INTO stock_level
+        FROM Inventory
+        WHERE product_id = 101;
+
+        IF stock_level >= 5 THEN
+            -- Sufficient stock: decrement inventory
+            UPDATE Inventory
+            SET quantity = quantity - 5
+            WHERE product_id = 101;
+        ELSE
+            -- Insufficient stock: log in Order_History
+            INSERT INTO Order_History (order_id, product_id, status)
+            VALUES (12345, 101, 'Pending Restock');
+        END IF;
+    END;
+
+    -- Commit transaction
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Rollback entire transaction on error
+        ROLLBACK;
+        RAISE;
+END;
+
+
+------------------------------------------------------------------------------------------------------------------
+
