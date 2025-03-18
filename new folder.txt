@@ -1,0 +1,1488 @@
+BFS using goal based agent 
+
+class GoalBasedAgent:
+    def __init__(self, goal):
+        self.goal = goal
+        self.visited = []
+        self.path = {}  # To track the path taken
+    
+    def formulate_goal(self, percept):
+        if percept == self.goal:
+            return "Goal reached"
+        return "Searching"
+    
+    def bfs_search(self, graph, start):
+        """
+        Perform BFS search from start node to find the goal
+        Returns path if goal is found, otherwise returns None
+        """
+        # Reset state for new search
+        self.visited = []
+        self.path = {}
+        
+        queue = []
+        
+        # Add start node
+        self.visited.append(start)
+        queue.append(start)
+        
+        # Track path
+        self.path[start] = None
+        
+        while queue:
+            current = queue.pop(0)  # Dequeue
+            print(f"Visiting: {current}")
+            
+            # Check if goal found
+            if current == self.goal:
+                return self._construct_path()
+            
+            # Explore neighbors
+            for neighbor in graph.get(current, []):
+                if neighbor not in self.visited:
+                    self.visited.append(neighbor)
+                    queue.append(neighbor)
+                    self.path[neighbor] = current  # Track where we came from
+        
+        # If we exhaust the queue without finding the goal
+        return None
+    
+    def _construct_path(self):
+        """Helper method to reconstruct the path from start to goal"""
+        path = []
+        current = self.goal
+        
+        while current is not None:
+            path.append(current)
+            current = self.path.get(current)
+        
+        # Reverse to get path from start to goal
+        return path[::-1]
+    
+    def act(self, percept, graph):
+        goal_status = self.formulate_goal(percept)
+        
+        if goal_status == "Goal reached":
+            return f"Already at goal {self.goal}!"
+        else:
+            path = self.bfs_search(graph, percept)
+            if path:
+                return f"Goal {self.goal} found! Path: {' -> '.join(path)}"
+            else:
+                return f"Goal {self.goal} not reachable from {percept}"
+
+# Example usage
+if __name__ == "__main__":
+    # Sample graph
+    graph = {
+        'A': ['B', 'C'],
+        'B': ['A', 'D', 'E'],
+        'C': ['A', 'F'],
+        'D': ['B'],
+        'E': ['B', 'F'],
+        'F': ['C', 'E']
+    }
+    
+    # Create agent with goal 'F'
+    agent = GoalBasedAgent(goal='F')
+    
+    # Agent starts at node 'A'
+    result = agent.act('A', graph)
+    print(result)
+
+###############################################################################################################
+DFS using goal based based agent 
+
+class GoalBasedAgent:
+    def __init__(self, goal):
+        self.goal = goal
+        self.visited = []
+        self.path = {}  # To track the path taken
+    
+    def formulate_goal(self, percept):
+        if percept == self.goal:
+            return "Goal reached"
+        return "Searching"
+    
+    def dfs_search(self, graph, start):
+        """
+        Perform DFS search from start node to find the goal
+        Returns path if goal is found, otherwise returns None
+        """
+        # Reset state for new search
+        self.visited = []
+        self.path = {}
+        
+        stack = []
+        
+        # Add start node
+        self.visited.append(start)
+        stack.append(start)
+        
+        # Track path
+        self.path[start] = None
+        
+        while stack:
+            current = stack.pop()  # LIFO: Pop from top
+            print(f"Visiting: {current}")
+            
+            # Check if goal found
+            if current == self.goal:
+                return self._construct_path()
+            
+            # Explore neighbors (in reverse order to maintain original traversal order)
+            for neighbor in reversed(graph.get(current, [])):
+                if neighbor not in self.visited:
+                    self.visited.append(neighbor)
+                    stack.append(neighbor)
+                    self.path[neighbor] = current  # Track where we came from
+        
+        # If we exhaust the stack without finding the goal
+        return None
+    
+    def _construct_path(self):
+        """Helper method to reconstruct the path from start to goal"""
+        path = []
+        current = self.goal
+        
+        while current is not None:
+            path.append(current)
+            current = self.path.get(current)
+        
+        # Reverse to get path from start to goal
+        return path[::-1]
+    
+    def act(self, percept, graph):
+        goal_status = self.formulate_goal(percept)
+        
+        if goal_status == "Goal reached":
+            return f"Already at goal {self.goal}!"
+        else:
+            path = self.dfs_search(graph, percept)
+            if path:
+                return f"Goal {self.goal} found! Path: {' -> '.join(path)}"
+            else:
+                return f"Goal {self.goal} not reachable from {percept}"
+
+# Example usage
+if __name__ == "__main__":
+    # Sample graph
+    graph = {
+        'A': ['B', 'C'],
+        'B': ['A', 'D', 'E'],
+        'C': ['A', 'F'],
+        'D': ['B'],
+        'E': ['B', 'F'],
+        'F': ['C', 'E']
+    }
+    
+    # Create agent with goal 'F'
+    agent = GoalBasedAgent(goal='F')
+    
+    # Agent starts at node 'A'
+    result = agent.act('A', graph)
+    print(result)
+
+
+#################################################################################################################
+UCS using goal based agent 
+
+import heapq
+
+class GoalBasedAgent:
+    def __init__(self, goal):
+        self.goal = goal
+        self.visited = set()
+        self.path = {}  # To track the path taken
+        self.costs = {}  # To track the cost to reach each node
+    
+    def formulate_goal(self, percept):
+        if percept == self.goal:
+            return "Goal reached"
+        return "Searching"
+    
+    def ucs_search(self, graph, start):
+        """
+        Perform Uniform Cost Search from start node to find the goal
+        Returns path and total cost if goal is found, otherwise returns None
+        
+        graph: Dictionary with nodes as keys and a list of (neighbor, cost) tuples as values
+        """
+        # Reset state for new search
+        self.visited = set()
+        self.path = {}
+        self.costs = {}
+        
+        # Priority queue for UCS
+        # Format: (cumulative_cost, node)
+        priority_queue = [(0, start)]
+        
+        # Track path and cost
+        self.path[start] = None
+        self.costs[start] = 0
+        
+        while priority_queue:
+            # Get the node with the lowest cumulative cost
+            current_cost, current_node = heapq.heappop(priority_queue)
+            
+            # Skip if we've already visited this node with a lower cost
+            if current_node in self.visited:
+                continue
+                
+            print(f"Visiting: {current_node} (Cost: {current_cost})")
+            
+            # Mark as visited
+            self.visited.add(current_node)
+            
+            # Check if goal found
+            if current_node == self.goal:
+                return self._construct_path(), current_cost
+            
+            # Explore neighbors
+            for neighbor, edge_cost in graph.get(current_node, []):
+                # Calculate the new cumulative cost
+                new_cost = current_cost + edge_cost
+                
+                # If we haven't visited this neighbor or found a cheaper path
+                if neighbor not in self.visited or new_cost < self.costs.get(neighbor, float('inf')):
+                    self.costs[neighbor] = new_cost
+                    heapq.heappush(priority_queue, (new_cost, neighbor))
+                    self.path[neighbor] = current_node  # Track where we came from
+        
+        # If we exhaust the queue without finding the goal
+        return None, float('inf')
+    
+    def _construct_path(self):
+        """Helper method to reconstruct the path from start to goal"""
+        path = []
+        current = self.goal
+        
+        while current is not None:
+            path.append(current)
+            current = self.path.get(current)
+        
+        # Reverse to get path from start to goal
+        return path[::-1]
+    
+    def act(self, percept, graph):
+        goal_status = self.formulate_goal(percept)
+        
+        if goal_status == "Goal reached":
+            return f"Already at goal {self.goal}!"
+        else:
+            path, total_cost = self.ucs_search(graph, percept)
+            if path:
+                return f"Goal {self.goal} found! Path: {' -> '.join(path)}, Total Cost: {total_cost}"
+            else:
+                return f"Goal {self.goal} not reachable from {percept}"
+
+# Example usage
+if __name__ == "__main__":
+    # Sample weighted graph
+    # Format: {node: [(neighbor1, cost1), (neighbor2, cost2), ...]}
+    graph = {
+        'A': [('B', 4), ('C', 2)],
+        'B': [('A', 4), ('D', 5), ('E', 1)],
+        'C': [('A', 2), ('F', 3)],
+        'D': [('B', 5)],
+        'E': [('B', 1), ('F', 6)],
+        'F': [('C', 3), ('E', 6)]
+    }
+    
+    # Create agent with goal 'F'
+    agent = GoalBasedAgent(goal='F')
+    
+    # Agent starts at node 'A'
+    result = agent.act('A', graph)
+    print(result)
+
+
+################################################################################################################
+a star heuristic gbfs optimization
+
+# Graph with different edge costs
+graph = {
+    'A': {'B': 2, 'C': 1},
+    'B': {'D': 4, 'E': 3},
+    'C': {'F': 1, 'G': 5},
+    'D': {'H': 2},
+    'E': {},
+    'F': {'I': 6},
+    'G': {},
+    'H': {},
+    'I': {}
+}
+
+# Heuristic function (estimated cost to reach goal 'I')
+heuristic = {
+    'A': 7,
+    'B': 6,
+    'C': 5,
+    'D': 4,
+    'E': 7,
+    'F': 3,
+    'G': 6,
+    'H': 2,
+    'I': 0  # Goal node
+}
+
+# A* Search Function
+def a_star(graph, start, goal):
+    frontier = [(start, 0 + heuristic[start])]  # List-based priority queue (sorted manually)
+    visited = set()  # Set to keep track of visited nodes
+    g_costs = {start: 0}  # Cost to reach each node from start
+    came_from = {start: None}  # Path reconstruction
+
+    while frontier:
+        # Sort frontier by f(n) = g(n) + h(n)
+        frontier.sort(key=lambda x: x[1])
+        print(f'\nsorted Frontier: {frontier}')
+        current_node, current_f = frontier.pop(0)  # Get node with lowest f(n)
+
+        if current_node in visited:
+            continue
+
+        print(current_node, end=" ")  # Print visited node
+        visited.add(current_node)
+
+        # If goal is reached, reconstruct path
+        if current_node == goal:
+            path = []
+            while current_node is not None:
+                path.append(current_node)
+                current_node = came_from[current_node]
+            path.reverse()
+            print(f"\nGoal found with A*. Path: {path}")
+            return
+
+
+
+
+        # Explore neighbors
+        for neighbor, cost in graph[current_node].items():
+            new_g_cost = g_costs[current_node] + cost  # Path cost from start to neighbor
+            print(f'\nNew Cost = {new_g_cost}')
+            f_cost = new_g_cost + heuristic[neighbor]  # f(n) = g(n) + h(n)
+            print(f'\nf_Cost = {f_cost}')
+
+            if neighbor not in g_costs or new_g_cost < g_costs[neighbor]:
+                g_costs[neighbor] = new_g_cost
+                print(f'\nUpdated G Cost: {g_costs} with Neigbhour: {neighbor}')
+                came_from[neighbor] = current_node
+                frontier.append((neighbor, f_cost))
+                print(f'\nFrontier Loop: {frontier}')
+
+    print("\nGoal not found")
+
+# Run A* Search
+print("\nFollowing is the A* Search:")
+a_star(graph, 'A', 'I')
+
+
+
+###################################################################################################################
+now using goal based agent
+# Graph with different edge costs
+graph = {
+    'A': {'B': 2, 'C': 1},
+    'B': {'D': 4, 'E': 3},
+    'C': {'F': 1, 'G': 5},
+    'D': {'H': 2},
+    'E': {},
+    'F': {'I': 6},
+    'G': {},
+    'H': {},
+    'I': {}
+}
+
+# Heuristic function (estimated cost to reach goal 'I')
+heuristic = {
+    'A': 7,
+    'B': 6,
+    'C': 5,
+    'D': 4,
+    'E': 7,
+    'F': 3,
+    'G': 6,
+    'H': 2,
+    'I': 0  # Goal node
+}
+
+class GoalBasedAgent:
+    def __init__(self, graph, heuristic):
+        self.graph = graph
+        self.heuristic = heuristic
+        self.visited = set()
+        self.g_costs = {}
+        self.came_from = {}
+        self.frontier = []
+    
+    def formulate_goal(self, goal):
+        """Define the goal state"""
+        self.goal = goal
+        print(f"Goal set to reach node: {goal}")
+    
+    def formulate_problem(self, start):
+        """Initialize the problem with start state"""
+        self.start = start
+        self.g_costs = {start: 0}
+        self.came_from = {start: None}
+        self.frontier = [(start, 0 + self.heuristic[start])]
+        self.visited = set()
+        print(f"Problem formulated with start node: {start}")
+    
+    def is_goal_reached(self, node):
+        """Check if current node is the goal"""
+        return node == self.goal
+    
+    def get_successors(self, node):
+        """Get all possible next states from current node"""
+        return self.graph[node].items()
+    
+    def update_frontier(self, node, f_cost):
+        """Add node to frontier with its f_cost"""
+        self.frontier.append((node, f_cost))
+        print(f"Added node {node} to frontier with f_cost: {f_cost}")
+    
+    def select_next_node(self):
+        """Select the most promising node from frontier"""
+        self.frontier.sort(key=lambda x: x[1])
+        print(f"\nSorted Frontier: {self.frontier}")
+        if self.frontier:
+            return self.frontier.pop(0)
+        return None, None
+    
+    def reconstruct_path(self):
+        """Reconstruct the path from start to goal"""
+        path = []
+        current = self.goal
+        while current is not None:
+            path.append(current)
+            current = self.came_from[current]
+        path.reverse()
+        return path
+    
+    def search(self):
+        """Execute A* search algorithm"""
+        print("\nStarting A* search...")
+        
+        while self.frontier:
+            current_node, current_f = self.select_next_node()
+            
+            if current_node in self.visited:
+                continue
+            
+            print(f"Visiting node: {current_node}")
+            self.visited.add(current_node)
+            
+            # Check if goal is reached
+            if self.is_goal_reached(current_node):
+                path = self.reconstruct_path()
+                print(f"\nGoal found with A*. Path: {path}")
+                return path
+            
+            # Explore neighbors (successors)
+            for neighbor, cost in self.get_successors(current_node):
+                new_g_cost = self.g_costs[current_node] + cost
+                print(f"New cost to reach {neighbor}: {new_g_cost}")
+                
+                # Calculate f_cost = g_cost + heuristic
+                f_cost = new_g_cost + self.heuristic[neighbor]
+                print(f"f_cost for {neighbor}: {f_cost}")
+                
+                # Update if this is a better path
+                if neighbor not in self.g_costs or new_g_cost < self.g_costs[neighbor]:
+                    self.g_costs[neighbor] = new_g_cost
+                    print(f"Updated g_cost for {neighbor}: {new_g_cost}")
+                    self.came_from[neighbor] = current_node
+                    self.update_frontier(neighbor, f_cost)
+        
+        print("\nGoal not found")
+        return None
+
+# Create and run the goal-based agent
+agent = GoalBasedAgent(graph, heuristic)
+agent.formulate_goal('I')
+agent.formulate_problem('A')
+final_path = agent.search()
+
+if final_path:
+    print(f"\nOptimal path found: {' -> '.join(final_path)}")
+    print(f"Total cost: {agent.g_costs[agent.goal]}")
+
+
+##################################################################################################################
+implementation of gbfs with heuristic 
+
+# Graph with different edge costs
+graph = {
+    'A': {'B': 2, 'C': 1},
+    'B': {'D': 4, 'E': 3},
+    'C': {'F': 1, 'G': 5},
+    'D': {'H': 2},
+    'E': {},
+    'F': {'I': 6},
+    'G': {},
+    'H': {},
+    'I': {}
+}
+
+# Heuristic function (estimated cost to reach goal 'I')
+heuristic = {
+    'A': 7,
+    'B': 6,
+    'C': 5,
+    'D': 4,
+    'E': 7,
+    'F': 3,
+    'G': 6,
+    'H': 2,
+    'I': 0  # Goal node
+}
+
+# Greedy Best-First Search Function (without heapq)
+def greedy_bfs(graph, start, goal):
+    frontier = [(start, heuristic[start])]  # List-based priority queue (sorted manually)
+    visited = set()  # Set to keep track of visited nodes
+    came_from = {start: None}  # Path reconstruction
+
+    while frontier:
+        # Sort frontier manually by heuristic value (ascending order)
+        frontier.sort(key=lambda x: x[1])
+        current_node, _ = frontier.pop(0)  # Get node with best heuristic
+
+        if current_node in visited:
+            continue
+
+        print(current_node, end=" ")  # Print visited node
+        visited.add(current_node)
+
+        # If goal is reached, reconstruct path
+        if current_node == goal:
+            path = []
+            while current_node is not None:
+                path.append(current_node)
+                current_node = came_from[current_node]
+            path.reverse()
+            print(f"\nGoal found with GBFS. Path: {path}")
+            return
+
+        # Expand neighbors based on heuristic
+        for neighbor in graph[current_node]:
+            if neighbor not in visited:
+                came_from[neighbor] = current_node
+                frontier.append((neighbor, heuristic[neighbor]))
+
+    print("\nGoal not found")
+
+# Run Greedy Best-First Search
+print("\nFollowing is the Greedy Best-First Search (GBFS):")
+greedy_bfs(graph, 'A', 'I')
+
+
+###########################################################################################################
+informed.py file 
+
+# Maze
+maze = [
+    ['S','.','#','.','K'],
+    ['.','#','.','.','.'],
+    ['.','.','.','#','.'],
+    ['#','.','#','.','#'],
+    ['.','.','.','.','.']
+]
+
+# 1. Heuristic: Manhattan Distance
+def heuristic(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+# 2. Greedy Best First Search (GBFS) without generate_neighbors
+def greedy_bfs(maze):
+    rows, cols = len(maze), len(maze[0])
+    start = goal = None
+
+    # Find 'S' and 'K'
+    for r in range(rows):
+        for c in range(cols):
+            if maze[r][c] == 'S':
+                start = (r, c)
+            elif maze[r][c] == 'K':
+                goal = (r, c)
+
+    visited = set()
+    frontier = [(heuristic(start, goal), start, [start])]  # (heuristic, position, path)
+
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]  # Up, Down, Left, Right
+
+    while frontier:
+        # Sort by heuristic value
+        frontier.sort(key=lambda x: x[0])
+        h_val, current, path = frontier.pop(0)
+
+        if current == goal:
+            return path
+
+        visited.add(current)
+
+        for dr, dc in directions:
+            nr, nc = current[0] + dr, current[1] + dc
+            if 0 <= nr < rows and 0 <= nc < cols:
+                if maze[nr][nc] != '#' and (nr, nc) not in visited:
+                    h = heuristic((nr, nc), goal)
+                    print(f"The heuristic of current node {((nr,nc),goal)} is {h}")
+                    frontier.append((h, (nr, nc), path + [(nr, nc)]))
+                    visited.add((nr, nc))
+
+    return None
+
+# 3. Main function
+path = greedy_bfs(maze)
+if path:
+    print("Path found:")
+    for step in path:
+        print(step)
+    print("Total steps:", len(path)-1)
+else:
+    print("No path found.")
+
+
+
+# Maze
+maze = [
+    ['S','.','#','.','K'],
+    ['.','#','.','.','.'],
+    ['.','.','.','#','.'],
+    ['#','.','#','.','#'],
+    ['.','.','.','.','.']
+]
+
+# Heuristic: Manhattan Distance
+def heuristic(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+# A* Search Algorithm
+def a_star_search(maze):
+    rows, cols = len(maze), len(maze[0])
+    start = goal = None
+
+    # Find 'S' and 'K'
+    for r in range(rows):
+        for c in range(cols):
+            if maze[r][c] == 'S':
+                start = (r, c)
+            elif maze[r][c] == 'K':
+                goal = (r, c)
+
+    directions = [(-1,0), (1,0), (0,-1), (0,1)]  # Up, Down, Left, Right
+    open_list = [(heuristic(start, goal), 0, start, [start])]  # (f = g+h, g, position, path)
+    visited = set()
+
+    while open_list:
+        # Sort by lowest f
+        open_list.sort(key=lambda x: x[0])
+        f, g, current, path = open_list.pop(0)
+
+        if current == goal:
+            return path
+
+        visited.add(current)
+
+        for dr, dc in directions:
+            nr, nc = current[0] + dr, current[1] + dc
+            neighbor = (nr, nc)
+            if 0 <= nr < rows and 0 <= nc < cols:
+                if maze[nr][nc] != '#' and neighbor not in visited:
+                    new_g = g + 1
+                    h = heuristic(neighbor, goal)
+                    new_f = new_g + h
+                    open_list.append((new_f, new_g, neighbor, path + [neighbor]))
+                    visited.add(neighbor)
+
+    return None
+
+# Main
+path = a_star_search(maze)
+if path:
+    print("Path found:")
+    for step in path:
+        print(step)
+    print("Total steps:", len(path)-1)
+else:
+    print("No path found.")
+
+#############################################################################################################
+
+uninformed.py file 
+
+# graph = {
+#     'A': ['B', 'C'],
+#     'B': ['D', 'E'],
+#     'C': ['F', 'G'],
+#     'D': ['H'],
+#     'E': [],
+#     'F': ['I'],
+#     'G': [],
+#     'H': [],
+#     'I': []
+# }
+
+
+# class Environment:
+#     def __init__(self, graph):
+#         self.graph = graph
+
+#     def get_percept(self, node):
+#         return node
+
+
+# class Agent:
+#     def __init__(self, goal):
+#         self.goal = goal
+
+#     def check(self, percept):
+#         if percept == self.goal:
+#             return "Goal reached"
+#         return "searching..."
+
+#     def dls(self, graph, start, goal, depth_limit):
+#         visited = []
+
+#         def dfs(node, depth):
+#             if depth > depth_limit:
+#                 return None  # Limit reached
+
+#             visited.append(node)
+#             print(node)  # This prints the current node in the search
+
+#             if node == goal:
+#                 print(f"Goal found with DLS. Path: {visited}")
+#                 return visited  # Return the path
+
+#             for neighbor in graph.get(node, []):  # Iterate over neighbors
+#                 if neighbor not in visited:
+#                     path = dfs(neighbor, depth + 1)
+#                     if path:
+#                         return path
+
+#             visited.pop()  # Backtrack if goal not found
+#             return None
+
+#         return dfs(start, 0)
+
+#     def act(self, percept, environment):
+#         goal_status = self.check(percept)
+#         if goal_status == "Goal reached":
+#             print(f"Goal {self.goal} found!")
+#         else:
+#             # Pass the actual graph from environment
+#             path = self.dls(environment.graph, percept, self.goal, 3)
+#             if path:
+#                 print(f"Path to goal: {path}")
+#             else:
+#                 print("Goal not found within the depth limit.")
+
+
+# env = Environment(graph)
+# agent = Agent('H')
+
+# agent.act('A', env)
+
+
+
+
+# ######################################################################################################################################
+
+
+# class Environment:
+#     def __init__(self, graph, costs):
+#         self.graph = graph
+#         self.costs = costs
+    
+#     def get_neighbors(self, node):
+#         return self.graph.get(node, [])
+    
+#     def get_cost(self, node1, node2):
+#         return self.costs.get((node1, node2), float('inf'))
+
+# class Agent:
+#     def __init__(self, goal):
+#         self.goal = goal
+    
+#     def ucs(self, environment, start):
+#         frontier = [(0, start, [])]
+#         visited = set()
+        
+#         while frontier:
+#             frontier.sort()
+#             cost, node, path = frontier.pop(0)
+            
+#             if node in visited:
+#                 continue
+            
+#             path = path + [node]
+#             visited.add(node)
+            
+#             if node == self.goal:
+#                 print(f"Goal found with UCS. Path: {path}, Total Cost: {cost}")
+#                 return
+            
+#             for neighbor in environment.get_neighbors(node):
+#                 if neighbor not in visited:
+#                     total_cost = cost + environment.get_cost(node, neighbor)
+#                     frontier.append((total_cost, neighbor, path))
+        
+#         print("Goal not found")
+
+# graph = {
+#     'A': ['B', 'C'], 'B': ['D', 'E'], 'C': ['F', 'G'],
+#     'D': ['H'], 'E': [], 'F': ['I'], 'G': [], 'H': [], 'I': []
+# }
+
+# 
+
+# environment = Environment(graph, costs)
+# agent = Agent('I')
+# agent.ucs(environment, 'A')
+
+
+#############################################################################################################
+
+
+maze = [
+    ['S','.','#','.','K'],
+    ['.','#','.','#','.'],
+    ['.','.','.','#','.'],
+    ['#','.','#','.','#'],
+    ['.','.','.','.','.']
+]
+
+graph = {
+    'A': ['B', 'C'],
+    'B': ['D', 'E'],
+    'C': ['F', 'G'],
+    'D': ['H'],
+    'E': [],
+    'F': ['I'],
+    'G': [],
+    'H': [],
+    'I': []
+}
+
+costs = {
+    ('A', 'B'): 1, ('A', 'C'): 4, ('B', 'D'): 2, ('B', 'E'): 5,
+    ('C', 'F'): 3, ('C', 'G'): 6, ('D', 'H'): 1, ('F', 'I'): 2
+}
+
+class Environment:
+    def __init__(self,graph):
+        self.graph = graph
+
+
+class Agent:
+    def __init__(self,goal):
+        self.goal = goal
+    
+    def check(self,percept):
+        if self.goal == percept:
+            return "Goal is achieved from the start"
+        
+    
+    def dfs(self,graph,start):
+        visited = []
+        
+        def recursive(node):
+            
+            visited.append(node)
+            print(f"The current node being explored is {node}")
+            
+            if node == self.goal:
+                print(f"The goal is found with the path {visited}")
+                return visited
+                        
+            for n in graph.get(node,[]):
+                if n not in visited:
+                    path = recursive(n)
+                    if path:
+                        return path
+            
+            visited.pop()
+            return None
+        
+        return recursive(start)
+            
+            
+            
+    def bfs_maze_simple(self,maze):
+        rows = len(maze)
+        cols = len(maze[0])
+        start = (0,0)
+        goal = (0,4)
+        directions = [(-1,0), (1,0), (0,-1), (0,1)]
+        visited = set()
+        queue = [(start, [start])]  
+        
+        while queue:
+            current, path = queue.pop(0)
+            r, c = current
+            print(f"Visiting: {current}, Path: {path}")
+            
+            if current == goal:
+                print("Goal found!", path)
+                return path
+            
+            visited.add(current)
+            
+            # Move in 4 directions
+            for dr, dc in directions:
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < rows and 0 <= nc < cols:
+                    if maze[nr][nc] != '#' and (nr, nc) not in visited:
+                        queue.append(((nr, nc), path + [(nr, nc)]))
+                        visited.add((nr, nc))
+        
+        print("No path found.")
+        return None
+
+    
+    def bfs(self,graph,start):
+        visited = set()
+        queue = [(start,[start])]
+        
+        while queue:
+            current,path = queue.pop(0)
+            print(current,path)
+            
+            if current == self.goal:
+                print(f"The goal is found {path}")
+                return path
+            
+            visited.add(current)
+            
+            for n in graph.get(current,[]):
+                if n not in visited:
+                    visited.add(n)
+                    queue.append((n,path + [n]))
+        return None
+    
+    
+    def ucs(self,start):
+        frontier = [(0, start, [])]
+        visited = set()
+        
+        while frontier:
+            frontier.sort()
+            cost, node, path = frontier.pop(0)
+            
+            if node in visited:
+                continue
+            
+            path = path + [node]
+            visited.add(node)
+            
+            if node == self.goal:
+                print(f"Goal found with UCS. Path: {path}, Total Cost: {cost}")
+                return
+            
+            for neighbor in env.graph.get(node,[]):
+                if neighbor not in visited:
+                    total_cost = cost + costs.get((node,neighbor))
+                    frontier.append((total_cost, neighbor, path))
+    
+    
+    def act(self,start,env):
+        if self.check(start):
+            print("The goal was at start")
+        else:
+            path = self.bfs_maze_simple(maze)
+            if path:
+                print(f"Path to goal: {path}")
+            else:
+                print("Goal not found within the depth limit.")
+                
+
+env = Environment(graph)
+agent = Agent('H')
+
+agent.act('A',env)
+# agent.ucs('A')
+
+
+
+
+#############################################################################################################
+
+genetic algorithm 
+
+import random
+import numpy as np
+import copy
+
+# ===== CROSSOVER TECHNIQUES =====
+
+def single_point_crossover(parent1, parent2):
+    """
+    Single-point crossover selects a random position and swaps segments after that point.
+    Works well for binary and numeric representations.
+    """
+    if len(parent1) != len(parent2):
+        raise ValueError("Parents must be of the same length")
+    
+    # Select a random crossover point
+    crossover_point = random.randint(1, len(parent1) - 1)
+    
+    # Create offspring
+    child1 = parent1[:crossover_point] + parent2[crossover_point:]
+    child2 = parent2[:crossover_point] + parent1[crossover_point:]
+    
+    return child1, child2
+
+def two_point_crossover(parent1, parent2):
+    """
+    Two-point crossover selects two random positions and swaps the segment between them.
+    Preserves segments at the beginning and end of the chromosome.
+    """
+    if len(parent1) != len(parent2):
+        raise ValueError("Parents must be of the same length")
+    
+    # Select two random crossover points
+    point1 = random.randint(1, len(parent1) - 2)
+    point2 = random.randint(point1 + 1, len(parent1) - 1)
+    
+    # Create offspring
+    child1 = parent1[:point1] + parent2[point1:point2] + parent1[point2:]
+    child2 = parent2[:point1] + parent1[point1:point2] + parent2[point2:]
+    
+    return child1, child2
+
+def uniform_crossover(parent1, parent2, probability=0.5):
+    """
+    Uniform crossover decides for each gene independently which parent it will be inherited from.
+    Good for maintaining diversity in the population.
+    """
+    if len(parent1) != len(parent2):
+        raise ValueError("Parents must be of the same length")
+    
+    child1 = []
+    child2 = []
+    
+    for i in range(len(parent1)):
+        if random.random() < probability:
+            child1.append(parent1[i])
+            child2.append(parent2[i])
+        else:
+            child1.append(parent2[i])
+            child2.append(parent1[i])
+    
+    return child1, child2
+
+def cyclic_crossover(parent1, parent2):
+    """
+    Cyclic crossover creates cycles between parents and preserves the absolute position of elements.
+    Often used for permutation problems.
+    """
+    if len(parent1) != len(parent2):
+        raise ValueError("Parents must be of the same length")
+    
+    child1 = [None] * len(parent1)
+    child2 = [None] * len(parent1)
+    
+    # Find cycles
+    cycles = []
+    remaining = set(range(len(parent1)))
+    
+    while remaining:
+        cycle = []
+        start = next(iter(remaining))
+        pos = start
+        
+        while True:
+            cycle.append(pos)
+            remaining.remove(pos)
+            val = parent1[pos]
+            pos = parent2.index(val)
+            if pos == start:
+                break
+        
+        cycles.append(cycle)
+    
+    # Fill in the children based on cycles
+    for i, cycle in enumerate(cycles):
+        for position in cycle:
+            if i % 2 == 0:  # Even cycles
+                child1[position] = parent1[position]
+                child2[position] = parent2[position]
+            else:  # Odd cycles
+                child1[position] = parent2[position]
+                child2[position] = parent1[position]
+    
+    return child1, child2
+
+def partially_mapped_crossover(parent1, parent2):
+    """
+    Partially Mapped Crossover (PMX) creates a mapping between segments of the two parents.
+    Preserves relative order and is suited for permutation problems.
+    """
+    if len(parent1) != len(parent2):
+        raise ValueError("Parents must be of the same length")
+    
+    # Create offspring as copies of parents
+    child1 = copy.deepcopy(parent1)
+    child2 = copy.deepcopy(parent2)
+    
+    # Select two random crossover points
+    point1 = random.randint(0, len(parent1) - 2)
+    point2 = random.randint(point1 + 1, len(parent1) - 1)
+    
+    # Create mappings
+    mapping1 = {}
+    mapping2 = {}
+    
+    for i in range(point1, point2 + 1):
+        mapping1[parent1[i]] = parent2[i]
+        mapping2[parent2[i]] = parent1[i]
+        
+        # Swap the middle segment
+        child1[i] = parent2[i]
+        child2[i] = parent1[i]
+    
+    # Apply mappings to the rest of the chromosomes
+    for i in range(len(parent1)):
+        if i < point1 or i > point2:
+            # Apply mapping for child1
+            value = child1[i]
+            while value in mapping1:
+                value = mapping1[value]
+            child1[i] = value
+            
+            # Apply mapping for child2
+            value = child2[i]
+            while value in mapping2:
+                value = mapping2[value]
+            child2[i] = value
+    
+    return child1, child2
+
+def ordered_crossover(parent1, parent2):
+    """
+    Ordered Crossover (OX) preserves the relative order of genes from one parent and
+    fills in the missing genes from the other parent.
+    Useful for permutation problems like TSP.
+    """
+    if len(parent1) != len(parent2):
+        raise ValueError("Parents must be of the same length")
+    
+    # Select two random crossover points
+    point1 = random.randint(0, len(parent1) - 2)
+    point2 = random.randint(point1 + 1, len(parent1) - 1)
+    
+    # Initialize children
+    child1 = [None] * len(parent1)
+    child2 = [None] * len(parent1)
+    
+    # Copy segment from parent1 to child1 and parent2 to child2
+    for i in range(point1, point2 + 1):
+        child1[i] = parent1[i]
+        child2[i] = parent2[i]
+    
+    # Fill in the remaining positions
+    for child, parent1_copy, parent2_copy in [(child1, parent1, parent2), (child2, parent2, parent1)]:
+        # Get the elements that are already in the child
+        existing_elements = set(gene for gene in child if gene is not None)
+        
+        # Create a list of elements from parent2 that are not yet in child
+        remaining_elements = [gene for gene in parent2_copy if gene not in existing_elements]
+        
+        # Fill in the remaining positions
+        j = 0
+        for i in range(len(child)):
+            if child[i] is None:
+                child[i] = remaining_elements[j]
+                j += 1
+    
+    return child1, child2
+
+# ===== SELECTION CRITERIA =====
+
+def roulette_wheel_selection(population, fitness_scores):
+    """
+    Roulette Wheel Selection selects individuals based on their fitness proportions.
+    Individuals with higher fitness have a higher chance of being selected.
+    """
+    total_fitness = sum(fitness_scores)
+    selection_probabilities = [fitness / total_fitness for fitness in fitness_scores]
+    
+    # Select an individual based on the probability distribution
+    selected_index = np.random.choice(len(population), p=selection_probabilities)
+    return population[selected_index]
+
+def tournament_selection(population, fitness_scores, tournament_size=3):
+    """
+    Tournament Selection randomly selects a subset of individuals and picks the best one.
+    Helps maintain diversity in the population.
+    """
+    indices = random.sample(range(len(population)), tournament_size)
+    tournament_fitness = [fitness_scores[i] for i in indices]
+    
+    # Find the winner (highest fitness)
+    winner_index = indices[tournament_fitness.index(max(tournament_fitness))]
+    return population[winner_index]
+
+def rank_based_selection(population, fitness_scores):
+    """
+    Rank-Based Selection assigns selection probabilities based on rank rather than raw fitness.
+    Helps prevent premature convergence when fitness differences are very large.
+    """
+    # Sort the population by fitness
+    sorted_indices = np.argsort(fitness_scores)
+    
+    # Assign ranks (1 to n)
+    ranks = np.arange(1, len(population) + 1)
+    
+    # Calculate selection probabilities based on ranks
+    total_rank = sum(ranks)
+    selection_probabilities = [rank / total_rank for rank in ranks]
+    
+    # Select an individual based on the probability distribution
+    selected_index = np.random.choice(sorted_indices, p=selection_probabilities)
+    return population[selected_index]
+
+def elitism_selection(population, fitness_scores, elite_size=2):
+    """
+    Elitism ensures that the best individuals are directly copied to the next generation.
+    Helps preserve good solutions.
+    """
+    # Sort the population by fitness in descending order
+    sorted_indices = np.argsort(fitness_scores)[::-1]
+    
+    # Return the top elite_size individuals
+    return [population[i] for i in sorted_indices[:elite_size]]
+
+# ===== FITNESS FUNCTIONS =====
+
+def chess_fitness(chromosome):
+    """
+    Fitness function for a chess position.
+    Evaluates a board position based on material value and piece position.
+    
+    This is a simplified version. In practice, chess evaluation is much more complex.
+    """
+    # Assume chromosome represents a chess position
+    # For simplicity, we'll use a basic material count and piece positions
+    
+    # Example values: pawn=1, knight/bishop=3, rook=5, queen=9
+    material_values = {'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0}
+    
+    # Calculate material advantage
+    material_score = sum(material_values.get(piece.lower(), 0) * (1 if piece.isupper() else -1) 
+                         for piece in chromosome if piece.lower() in material_values)
+    
+    # Factor in piece positions (simplified)
+    position_score = 0
+    for i, piece in enumerate(chromosome):
+        if piece.lower() == 'p':  # Pawns are better in the center and advanced
+            position_score += (i % 8 - 3.5)**2 * (-0.1 if piece.isupper() else 0.1)
+    
+    return material_score + position_score
+
+def eight_puzzle_fitness(chromosome):
+    """
+    Fitness function for the 8-puzzle problem.
+    Calculates the Manhattan distance from the current state to the goal state.
+    Lower distance means higher fitness.
+    """
+    # Assume chromosome is a list representing the puzzle state
+    # Goal state: [1, 2, 3, 4, 5, 6, 7, 8, 0] (0 represents the empty space)
+    goal_state = [1, 2, 3, 4, 5, 6, 7, 8, 0]
+    
+    # Calculate Manhattan distance
+    distance = 0
+    for i in range(9):
+        if chromosome[i] != 0:  # Skip empty space
+            # Find the position of this number in the goal state
+            goal_position = goal_state.index(chromosome[i])
+            
+            # Calculate Manhattan distance
+            # (row difference + column difference)
+            current_row, current_col = i // 3, i % 3
+            goal_row, goal_col = goal_position // 3, goal_position % 3
+            distance += abs(current_row - goal_row) + abs(current_col - goal_col)
+    
+    # Convert distance to fitness (lower distance = higher fitness)
+    return 1 / (1 + distance)
+
+def maze_solving_fitness(chromosome, maze):
+    """
+    Fitness function for maze solving.
+    Evaluates how close the path gets to the goal.
+    """
+    # Assume chromosome represents a sequence of moves (e.g., 'UDLR')
+    # Maze is a 2D array where 0 is a path, 1 is a wall, 2 is the start, and 3 is the goal
+    
+    # Find the start position
+    start_pos = None
+    for i in range(len(maze)):
+        for j in range(len(maze[0])):
+            if maze[i][j] == 2:
+                start_pos = (i, j)
+                break
+        if start_pos:
+            break
+    
+    # Find the goal position
+    goal_pos = None
+    for i in range(len(maze)):
+        for j in range(len(maze[0])):
+            if maze[i][j] == 3:
+                goal_pos = (i, j)
+                break
+        if goal_pos:
+            break
+    
+    # Follow the path
+    current_pos = start_pos
+    visited = set([current_pos])
+    valid_moves = 0
+    
+    for move in chromosome:
+        if move == 'U' and current_pos[0] > 0 and maze[current_pos[0]-1][current_pos[1]] != 1:
+            current_pos = (current_pos[0]-1, current_pos[1])
+            valid_moves += 1
+        elif move == 'D' and current_pos[0] < len(maze)-1 and maze[current_pos[0]+1][current_pos[1]] != 1:
+            current_pos = (current_pos[0]+1, current_pos[1])
+            valid_moves += 1
+        elif move == 'L' and current_pos[1] > 0 and maze[current_pos[0]][current_pos[1]-1] != 1:
+            current_pos = (current_pos[0], current_pos[1]-1)
+            valid_moves += 1
+        elif move == 'R' and current_pos[1] < len(maze[0])-1 and maze[current_pos[0]][current_pos[1]+1] != 1:
+            current_pos = (current_pos[0], current_pos[1]+1)
+            valid_moves += 1
+        
+        visited.add(current_pos)
+        
+        # Check if we've reached the goal
+        if current_pos == goal_pos:
+            break
+    
+    # Calculate Manhattan distance to the goal
+    distance_to_goal = abs(current_pos[0] - goal_pos[0]) + abs(current_pos[1] - goal_pos[1])
+    
+    # Fitness is based on:
+    # 1. How close we got to the goal (lower distance is better)
+    # 2. How many valid moves we made (more is better)
+    # 3. How many unique cells we visited (more is better)
+    fitness = (100 / (1 + distance_to_goal)) + valid_moves + len(visited)
+    
+    # Bonus if we reached the goal
+    if current_pos == goal_pos:
+        fitness += 1000
+    
+    return fitness
+
+def n_queens_fitness(chromosome):
+    """
+    Fitness function for the N-Queens problem.
+    Calculates the number of non-attacking pairs of queens.
+    """
+    # Assume chromosome is a permutation of integers from 0 to n-1
+    # representing the positions of queens in each row
+    
+    n = len(chromosome)
+    conflicts = 0
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            # Check if queens are on the same diagonal
+            if abs(i - j) == abs(chromosome[i] - chromosome[j]):
+                conflicts += 1
+    
+    # Maximum possible conflicts
+    max_conflicts = n * (n - 1) // 2
+    
+    # Fitness is the number of non-attacking pairs
+    return max_conflicts - conflicts
+
+# ===== SAMPLE GENETIC ALGORITHM =====
+
+def genetic_algorithm(population_size, chromosome_length, fitness_function, 
+                     selection_method, crossover_method, generations=100,
+                     mutation_rate=0.01, elitism=True):
+    """
+    A generic genetic algorithm implementation.
+    
+    Parameters:
+    - population_size: Number of individuals in the population
+    - chromosome_length: Length of each chromosome
+    - fitness_function: Function to evaluate fitness
+    - selection_method: Method to select parents
+    - crossover_method: Method to perform crossover
+    - generations: Number of generations to run
+    - mutation_rate: Probability of mutation for each gene
+    - elitism: Whether to use elitism
+    
+    Returns:
+    - best_solution: The best solution found
+    - best_fitness: The fitness of the best solution
+    """
+    # Initialize population (random binary strings for simplicity)
+    population = [
+        [random.randint(0, 1) for _ in range(chromosome_length)]
+        for _ in range(population_size)
+    ]
+    
+    best_solution = None
+    best_fitness = float('-inf')
+    
+    for generation in range(generations):
+        # Evaluate fitness
+        fitness_scores = [fitness_function(chromosome) for chromosome in population]
+        
+        # Find the best solution
+        generation_best = max(fitness_scores)
+        generation_best_idx = fitness_scores.index(generation_best)
+        
+        if generation_best > best_fitness:
+            best_fitness = generation_best
+            best_solution = population[generation_best_idx]
+        
+        # Create new population
+        new_population = []
+        
+        # Apply elitism if enabled
+        if elitism:
+            elite = elitism_selection(population, fitness_scores, elite_size=2)
+            new_population.extend(elite)
+        
+        # Fill the rest of the population with offspring
+        while len(new_population) < population_size:
+            # Select parents
+            if selection_method == "roulette":
+                parent1 = roulette_wheel_selection(population, fitness_scores)
+                parent2 = roulette_wheel_selection(population, fitness_scores)
+            elif selection_method == "tournament":
+                parent1 = tournament_selection(population, fitness_scores)
+                parent2 = tournament_selection(population, fitness_scores)
+            elif selection_method == "rank":
+                parent1 = rank_based_selection(population, fitness_scores)
+                parent2 = rank_based_selection(population, fitness_scores)
+            
+            # Perform crossover
+            child1, child2 = crossover_method(parent1, parent2)
+            
+            # Perform mutation
+            for i in range(len(child1)):
+                if random.random() < mutation_rate:
+                    child1[i] = 1 - child1[i]  # Flip bit
+            
+            for i in range(len(child2)):
+                if random.random() < mutation_rate:
+                    child2[i] = 1 - child2[i]  # Flip bit
+            
+            # Add children to new population
+            new_population.append(child1)
+            if len(new_population) < population_size:
+                new_population.append(child2)
+        
+        # Replace old population
+        population = new_population
+    
+    return best_solution, best_fitness
